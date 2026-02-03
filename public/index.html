@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>レビュー分析（Dify）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', system-ui, sans-serif;
+      min-height: 100vh;
+      background: #f9e8c9;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 装飾の曲線 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -100px;
+      right: -150px;
+      width: 400px;
+      height: 400px;
+      background: linear-gradient(135deg, #f4a940 0%, #e8941c 100%);
+      border-radius: 50% 50% 50% 70%;
+      opacity: 0.6;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -150px;
+      left: -100px;
+      width: 350px;
+      height: 350px;
+      background: linear-gradient(135deg, #d4a05a 0%, #c4883c 100%);
+      border-radius: 70% 50% 50% 50%;
+      opacity: 0.5;
+      z-index: 0;
+    }
+
+    .wave-decoration {
+      position: fixed;
+      top: 80px;
+      left: 30px;
+      width: 120px;
+      height: 60px;
+      z-index: 0;
+    }
+
+    .wave-decoration::before,
+    .wave-decoration::after {
+      content: '';
+      position: absolute;
+      height: 8px;
+      border-radius: 20px;
+    }
+
+    .wave-decoration::before {
+      top: 0;
+      left: 0;
+      width: 80px;
+      background: #d4a05a;
+    }
+
+    .wave-decoration::after {
+      top: 16px;
+      left: 10px;
+      width: 100px;
+      background: #e8941c;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      animation: fadeIn 0.6s ease-out;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'Poppins', 'Noto Sans JP', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: #5c4a32;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #a08060;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* Card */
+    .card {
+      background: #fffbf5;
+      border-radius: 32px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 40px rgba(180, 140, 80, 0.15);
+      animation: fadeIn 0.4s ease-out;
+      border: 2px solid rgba(212, 160, 90, 0.2);
+    }
+
+    label {
+      display: block;
+      color: #7a6548;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      background: #fff8ee;
+      border: 2px solid #e8d4b8;
+      border-radius: 20px;
+      padding: 20px;
+      color: #5c4a32;
+      font-size: 15px;
+      font-family: inherit;
+      line-height: 1.8;
+      resize: vertical;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    textarea::placeholder {
+      color: #c4a882;
+    }
+
+    textarea:focus {
+      border-color: #e8941c;
+      box-shadow: 0 0 0 4px rgba(232, 148, 28, 0.15);
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 16px 32px;
+      background: linear-gradient(135deg, #f4a940 0%, #e8941c 100%);
+      border: none;
+      border-radius: 16px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(232, 148, 28, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(232, 148, 28, 0.45);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      background: #ddc9a8;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Status */
+    .status {
+      color: #a08060;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status.loading { color: #e8941c; }
+    .status.success { color: #6b9a5b; }
+    .status.error { color: #d45a5a; }
+
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    .loading .spinner {
+      display: inline-block;
+    }
+
+    /* Result */
+    .result-section {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease;
+    }
+
+    .result-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Result Header */
+    .result-header {
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-radius: 32px 32px 0 0;
+      flex-wrap: wrap;
+    }
+
+    .result-header.positive { background: linear-gradient(135deg, #7cb86a 0%, #5a9a48 100%); }
+    .result-header.negative { background: linear-gradient(135deg, #e07a5f 0%, #c45a40 100%); }
+    .result-header.mixed { background: linear-gradient(135deg, #f4a940 0%, #e8941c 100%); }
+    .result-header.neutral { background: linear-gradient(135deg, #a09080 0%, #887868 100%); }
+
+    .result-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .result-icon { font-size: 32px; }
+
+    .result-label-group small {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+      letter-spacing: 2px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .result-label {
+      font-family: 'Poppins', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .result-meta {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* Badges */
+    .badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.25);
+      color: #fff;
+      backdrop-filter: blur(10px);
+    }
+
+    .priority-high { background: rgba(200, 80, 60, 0.9); }
+    .priority-medium { background: rgba(232, 148, 28, 0.9); }
+    .priority-low { background: rgba(90, 154, 72, 0.9); }
+
+    /* Score */
+    .score-display {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 18px;
+    }
+
+    .star { color: rgba(255, 255, 255, 0.4); }
+    .star.filled { color: #fff5d4; text-shadow: 0 0 8px rgba(255, 220, 120, 0.8); }
+
+    /* Summary Bar */
+    .summary-bar {
+      background: #fff8ee;
+      padding: 16px 28px;
+      border-bottom: 2px solid rgba(212, 160, 90, 0.15);
+    }
+
+    .summary-text {
+      color: #5c4a32;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* Result Body */
+    .result-body {
+      padding: 24px 28px;
+      background: #fffbf5;
+      border-radius: 0 0 32px 32px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .result-grid { grid-template-columns: 1fr; }
+    }
+
+    .result-item {
+      background: #fff8ee;
+      border-radius: 20px;
+      padding: 18px;
+      border: 2px solid rgba(212, 160, 90, 0.15);
+    }
+
+    .result-item.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .result-item-label {
+      font-size: 11px;
+      color: #a08060;
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .result-item-value {
+      color: #5c4a32;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    /* Action Box */
+    .action-box {
+      background: linear-gradient(135deg, rgba(244, 169, 64, 0.15) 0%, rgba(232, 148, 28, 0.15) 100%);
+      border: 2px solid rgba(232, 148, 28, 0.3);
+    }
+
+    .action-box .result-item-label {
+      color: #c47810;
+    }
+
+    .action-box .result-item-value {
+      color: #5c4a32;
+      font-weight: 500;
+    }
+
+    /* Pain Point Box */
+    .pain-box {
+      background: rgba(224, 122, 95, 0.1);
+      border: 2px solid rgba(224, 122, 95, 0.3);
+    }
+
+    .pain-box .result-item-label {
+      color: #c45a40;
+    }
+
+    /* Keywords */
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .keyword {
+      background: linear-gradient(135deg, #f4a940 0%, #e8941c 100%);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(232, 148, 28, 0.3);
+    }
+
+    /* Repeat Intent */
+    .repeat-positive { color: #5a9a48; font-weight: 600; }
+    .repeat-negative { color: #c45a40; font-weight: 600; }
+    .repeat-neutral { color: #a08060; }
+
+    /* Category Badge */
+    .category-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff0d9;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      color: #7a6548;
+      border: 1px solid rgba(212, 160, 90, 0.3);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      color: #a08060;
+      font-size: 12px;
+      margin-top: 32px;
+      letter-spacing: 1px;
+    }
+
+    /* Retry Button */
+    .btn-retry {
+      width: 100%;
+      margin-top: 24px;
+      padding: 16px 32px;
+      background: #fff8ee;
+      border: 2px solid #e8d4b8;
+      border-radius: 16px;
+      color: #7a6548;
+      font-size: 15px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-retry:hover {
+      background: #fff0d9;
+      color: #5c4a32;
+      border-color: #d4a05a;
+    }
+
+    /* Hidden */
+    pre { display: none; }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f0e0c8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #d4a05a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #c4883c; }
+  </style>
+</head>
+<body>
+  <div class="wave-decoration"></div>
+  
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <h1>レビュー分析</h1>
+      </div>
+      <p class="subtitle">EC Review Analytics</p>
+    </header>
+
+    <!-- Input Card -->
+    <div id="input-card" class="card">
+      <label for="text">レビュー本文を入力してください</label>
+      <textarea id="text" placeholder="例：発送が遅いし、すぐ壊れた。もう買わない。"></textarea>
+      <div class="btn-row">
+        <button id="send" class="btn-primary">
+          <span class="spinner"></span>
+          <span class="btn-text">🔍 分析する</span>
+        </button>
+        <span id="status" class="status"></span>
+      </div>
+    </div>
+
+    <!-- Result Card -->
+    <div id="result-card" class="card result-section" style="padding: 0; display: none;">
+      
+      <!-- Header: Label + Priority + Score -->
+      <div id="result-header" class="result-header">
+        <div class="result-main">
+          <span id="result-icon" class="result-icon"></span>
+          <div class="result-label-group">
+            <small>判定結果</small>
+            <div id="result-label" class="result-label"></div>
+          </div>
+        </div>
+        <div class="result-meta">
+          <span id="priority-badge" class="badge"></span>
+          <div id="score-display" class="score-display"></div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div id="summary-bar" class="summary-bar" style="display: none;">
+        <span id="result-summary" class="summary-text"></span>
+      </div>
+
+      <!-- Body -->
+      <div class="result-body">
+        <div class="result-grid">
+          
+          <!-- カテゴリ & リピート意向 -->
+          <div class="result-item">
+            <div class="result-item-label">📁 カテゴリ</div>
+            <div id="result-category" class="result-item-value"></div>
+          </div>
+          
+          <div class="result-item">
+            <div class="result-item-label">🔄 リピート意向</div>
+            <div id="result-repeat" class="result-item-value"></div>
+          </div>
+
+          <!-- 理由 -->
+          <div class="result-item full-width">
+            <div class="result-item-label">💬 判定理由</div>
+            <div id="result-reason" class="result-item-value"></div>
+          </div>
+
+          <!-- キーワード -->
+          <div id="keywords-row" class="result-item full-width" style="display: none;">
+            <div class="result-item-label">🏷️ キーワード</div>
+            <div id="result-keywords" class="keywords"></div>
+          </div>
+
+          <!-- 課題 (Pain Point) -->
+          <div id="pain-row" class="result-item full-width pain-box" style="display: none;">
+            <div class="result-item-label">⚠️ 顧客の課題・不満</div>
+            <div id="result-pain" class="result-item-value"></div>
+          </div>
+
+          <!-- 改善アクション -->
+          <div id="action-row" class="result-item full-width action-box">
+            <div class="result-item-label">🚀 改善アクション</div>
+            <div id="result-action" class="result-item-value"></div>
+          </div>
+
+        </div>
+
+        <!-- もう一度分析するボタン -->
+        <button id="retry-btn" class="btn-retry">
+          🔄 もう一度分析する
+        </button>
+      </div>
+    </div>
+
+    <!-- Hidden output for errors -->
+    <pre id="out"></pre>
+
+    <!-- Footer -->
+    <p class="footer">Powered by Dify AI</p>
+  </div>
+
+  <script>
+    let conversationId = "";
+    const $ = (id) => document.getElementById(id);
+
+    const labelConfig = {
+      positive: { icon: '✨', text: 'ポジティブ', class: 'positive' },
+      negative: { icon: '⚡', text: 'ネガティブ', class: 'negative' },
+      mixed:    { icon: '🔄', text: 'ミックス',   class: 'mixed' },
+      neutral:  { icon: '○',  text: 'ニュートラル', class: 'neutral' }
+    };
+
+    const priorityConfig = {
+      high:   { text: '🔴 要即対応', class: 'priority-high' },
+      medium: { text: '🟡 要検討',   class: 'priority-medium' },
+      low:    { text: '🟢 参考情報', class: 'priority-low' }
+    };
+
+    const categoryIcons = {
+      '商品品質': '📦',
+      '配送': '🚚',
+      '梱包': '📬',
+      '価格': '💰',
+      '対応': '💁',
+      'その他': '📋'
+    };
+
+    function setStatus(text, type = '') {
+      const el = $("status");
+      el.textContent = text;
+      el.className = 'status ' + type;
+    }
+
+    function setLoading(loading) {
+      const btn = $("send");
+      const btnText = btn.querySelector('.btn-text');
+      if (loading) {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        btnText.textContent = '分析中...';
+      } else {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btnText.textContent = '🔍 分析する';
+      }
+    }
+
+    function renderStars(score) {
+      let html = '';
+      for (let i = 1; i <= 5; i++) {
+        html += `<span class="star ${i <= score ? 'filled' : ''}">★</span>`;
+      }
+      return html;
+    }
+
+    function showResult(data) {
+      const card = $("result-card");
+      const header = $("result-header");
+      
+      let parsed = null;
+      try {
+        if (data.answer) {
+          let jsonStr = data.answer;
+          const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (match) jsonStr = match[1];
+          parsed = JSON.parse(jsonStr.trim());
+        }
+      } catch (e) {
+        // Not JSON
+      }
+
+      if (parsed && parsed.label) {
+        const config = labelConfig[parsed.label] || labelConfig.neutral;
+        
+        // Header
+        header.className = 'result-header ' + config.class;
+        $("result-icon").textContent = config.icon;
+        $("result-label").textContent = config.text;
+
+        // Priority
+        const pConfig = priorityConfig[parsed.priority] || priorityConfig.low;
+        const priorityBadge = $("priority-badge");
+        priorityBadge.textContent = pConfig.text;
+        priorityBadge.className = 'badge ' + pConfig.class;
+
+        // Score
+        if (parsed.score) {
+          $("score-display").innerHTML = renderStars(parsed.score);
+        }
+
+        // Summary
+        if (parsed.summary) {
+          $("summary-bar").style.display = 'block';
+          $("result-summary").textContent = `"${parsed.summary}"`;
+        } else {
+          $("summary-bar").style.display = 'none';
+        }
+
+        // Category
+        const catIcon = categoryIcons[parsed.category] || '📋';
+        $("result-category").innerHTML = `<span class="category-badge">${catIcon} ${parsed.category || 'その他'}</span>`;
+
+        // Repeat Intent
+        const repeatEl = $("result-repeat");
+        const repeatText = parsed.repeat_intent || '不明';
+        let repeatClass = 'repeat-neutral';
+        if (repeatText.includes('あり')) repeatClass = 'repeat-positive';
+        if (repeatText.includes('なし')) repeatClass = 'repeat-negative';
+        repeatEl.innerHTML = `<span class="${repeatClass}">${repeatText}</span>`;
+
+        // Reason
+        $("result-reason").textContent = parsed.reason || '-';
+
+        // Keywords
+        if (parsed.keywords && parsed.keywords.length > 0) {
+          $("keywords-row").style.display = 'block';
+          $("result-keywords").innerHTML = parsed.keywords
+            .map(k => `<span class="keyword">${k}</span>`)
+            .join('');
+        } else {
+          $("keywords-row").style.display = 'none';
+        }
+
+        // Pain Point
+        if (parsed.pain_point && parsed.pain_point !== 'null' && parsed.pain_point !== null) {
+          $("pain-row").style.display = 'block';
+          $("result-pain").textContent = parsed.pain_point;
+        } else {
+          $("pain-row").style.display = 'none';
+        }
+
+        // Action
+        $("result-action").textContent = parsed.action || '-';
+
+      } else {
+        // Fallback
+        header.className = 'result-header neutral';
+        $("result-icon").textContent = '📄';
+        $("result-label").textContent = '応答';
+        $("priority-badge").style.display = 'none';
+        $("score-display").innerHTML = '';
+        $("summary-bar").style.display = 'none';
+        $("result-reason").textContent = data.answer || JSON.stringify(data.raw, null, 2);
+        $("keywords-row").style.display = 'none';
+        $("pain-row").style.display = 'none';
+        $("action-row").style.display = 'none';
+      }
+
+      card.style.display = 'block';
+      requestAnimationFrame(() => {
+        card.classList.add('visible');
+      });
+    }
+
+    function hideResult() {
+      const card = $("result-card");
+      card.classList.remove('visible');
+      card.style.display = 'none';
+    }
+
+    $("send").addEventListener("click", async () => {
+      setLoading(true);
+      setStatus("送信中...", "loading");
+      hideResult();
+
+      const text = $("text").value.trim();
+      if (!text) {
+        setStatus("レビュー本文を入力してください", "error");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const r = await fetch("/api/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, conversation_id: conversationId })
+        });
+        const data = await r.json();
+
+        if (!r.ok) {
+          setStatus("エラー", "error");
+          $("out").textContent = JSON.stringify(data, null, 2);
+          setLoading(false);
+          return;
+        }
+
+        conversationId = data.conversation_id || conversationId;
+        setStatus("完了", "success");
+        showResult(data);
+        
+        // 入力カードを非表示
+        $("input-card").style.display = 'none';
+      } catch (e) {
+        setStatus("通信エラー", "error");
+        $("out").textContent = String(e);
+      }
+
+      setLoading(false);
+    });
+
+    // もう一度分析するボタン
+    $("retry-btn").addEventListener("click", () => {
+      hideResult();
+      $("text").value = '';
+      $("input-card").style.display = 'block';
+      setStatus('');
+    });
+  </script>
+</body>
+</html>
